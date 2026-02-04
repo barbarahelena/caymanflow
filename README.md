@@ -4,7 +4,7 @@ A Nextflow pipeline for running Cayman on shotgun paired-end metagenomic reads.
 
 ## Introduction
 
-**Caymanflow** is a simple bioinformatics pipeline that annotates shotgun metagenomic paired-end reads using [Cayman](https://github.com/zellerlab/cayman). Unlike traditional annotation workflows that require assembly and gene prediction, Caymanflow works directly on raw reads.
+**Caymanflow** is a simple bioinformatics pipeline that annotates shotgun metagenomic paired-end reads using [Cayman](https://github.com/zellerlab/cayman).
 
 ## Pipeline Summary
 
