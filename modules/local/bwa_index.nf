@@ -24,7 +24,7 @@ process BWA_INDEX {
 
     script:
     """
-    bwa index ${fasta}
+    bwa index -b 100000000 ${fasta}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

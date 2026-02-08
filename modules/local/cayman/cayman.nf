@@ -9,6 +9,7 @@ process CAYMAN_CAYMAN {
     tuple val(meta), path(reads)
     path(db, stageAs: "database.fna")
     path(index, stageAs: "database.fna.*", arity: '0..*')
+    path(anno, stageAs: "anno.csv")
 
     output:
     tuple val(meta), path("${meta.id}/*"), emit: cayman
@@ -23,9 +24,10 @@ process CAYMAN_CAYMAN {
     def r1 = reads[0]
     def r2 = reads[1]
     """
-    cayman profile \\
-        --reference database.fna \\
-        --reads ${r1} ${r2} \\
+    cayman profile -1 ${r1} -2 ${r2} \\
+        database.fna \\
+        index.fna \\
+        anno.csv \\
         --cpus_for_alignment ${task.cpus} \\
         ${args} \\
         --outdir ${prefix}

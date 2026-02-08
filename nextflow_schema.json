@@ -49,10 +49,29 @@
                     "help_text": "If not provided, the pipeline will download the Cayman database automatically. If you have a pre-downloaded database, specify the path here to save time.",
                     "fa_icon": "fas fa-database"
                 },
+                "cayman_annotations": {
+                    "type": "string",
+                    "description": "Path to Cayman annotations CSV file.",
+                    "help_text": "If you have a pre-downloaded Cayman annotations file, specify the path here. This is only used if cayman_database is also provided.",
+                    "fa_icon": "fas fa-file-csv"
+                },
+                "cayman_dbname": {
+                    "type": "string",
+                    "default": "human-gut",
+                    "description": "Name of the Cayman database to download.",
+                    "help_text": "Specify which database to download from GMGC10. Options include: human-gut, pig-gut, dog-gut, cat-gut, mouse-gut, chicken-gut, human-oral, human-skin, human-nose, human-vagina, soil, marine, freshwater, wastewater, etc.",
+                    "fa_icon": "fas fa-database"
+                },
+                "bwa_index": {
+                    "type": "string",
+                    "description": "Path to directory containing pre-built BWA index files.",
+                    "help_text": "If you have pre-built BWA index files (.amb, .ann, .bwt, .pac, .sa), specify the directory path here. The index files should have the same basename as the database file. This will skip the indexing step.",
+                    "fa_icon": "fas fa-folder"
+                },
                 "skip_bwa_index": {
                     "type": "boolean",
-                    "description": "Skip BWA-MEM2 indexing step.",
-                    "help_text": "Set this flag to skip the BWA-MEM2 indexing step. Use this only if the database is already indexed. The index files must be located in the same directory as the database with the same basename.",
+                    "description": "Skip BWA indexing step.",
+                    "help_text": "Set this flag to skip the BWA indexing step. Use this only if the database is already indexed. The index files must be located in the same directory as the database with the same basename.",
                     "fa_icon": "fas fa-forward"
                 },
                 "skip_qc": {
