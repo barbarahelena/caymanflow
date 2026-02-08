@@ -64,14 +64,6 @@ results/
     └── *.csv
 ```
 
-## Cayman
-
-Cayman directly annotates metagenomic reads without requiring assembly or gene prediction. The tool identifies and annotates genes from raw sequencing data, making it particularly useful for:
-
-- Direct functional profiling of metagenomes
-- Rapid annotation without computational overhead of assembly
-- Analysis of low-abundance organisms that may be lost during assembly
-
 ## Credits
 
 This pipeline uses:
