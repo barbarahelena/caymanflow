@@ -1,0 +1,34 @@
+----------------------------------------------------
+  caymanflow ${version}
+----------------------------------------------------
+Run Name: $runName
+
+<% if (success){
+    out << "## caymanflow execution completed successfully! ##"
+} else {
+    out << """####################################################
+## caymanflow execution completed unsuccessfully! ##
+####################################################
+The exit status of the task that caused the workflow execution to fail was: $exitStatus.
+The full error message was:
+
+${errorReport}
+"""
+} %>
+
+
+The workflow was completed at $dateComplete (duration: $duration)
+
+The command used to launch the workflow was as follows:
+
+  $commandLine
+
+
+
+Pipeline Configuration:
+-----------------------
+<% out << summary.collect{ k,v -> " - $k: $v" }.join("\n") %>
+
+--
+caymanflow
+https://github.com/barbarahelena/caymanflow

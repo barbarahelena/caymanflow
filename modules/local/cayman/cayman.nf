@@ -7,11 +7,12 @@ process CAYMAN_CAYMAN {
 
     input:
     tuple val(meta), path(reads)
-    path(db)
+    path(db, stageAs: "database.fna")
+    path(index, stageAs: "database.fna.*", arity: '0..*')
 
     output:
-    tuple val(meta), path("*.csv"), emit: cayman
-    path "versions.yml"           , emit: versions
+    tuple val(meta), path("${meta.id}/*"), emit: cayman
+    path "versions.yml"                  , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -19,14 +20,15 @@ process CAYMAN_CAYMAN {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
-    def input_reads = reads instanceof List ? "${reads[0]} ${reads[1]}" : "${reads}"
+    def r1 = reads[0]
+    def r2 = reads[1]
     """
-    cayman annotate_reads \\
-        ${db} \\
-        ${input_reads} \\
-        $args \\
-        -t $task.cpus \\
-        -o ${prefix}.csv
+    cayman profile \\
+        --reference database.fna \\
+        --reads ${r1} ${r2} \\
+        --cpus_for_alignment ${task.cpus} \\
+        ${args} \\
+        --outdir ${prefix}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -37,7 +39,8 @@ process CAYMAN_CAYMAN {
     stub:
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
-    touch ${prefix}.csv
+    mkdir -p ${prefix}
+    touch ${prefix}/profile_results.txt
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

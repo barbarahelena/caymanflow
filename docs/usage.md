@@ -1,32 +1,25 @@
-# AMRfinderflow: Usage
+# Caymanflow: Usage
 
 > _Documentation of pipeline parameters is generated automatically from the pipeline schema and can no longer be found in markdown files._
 
 ## Introduction
 
-AMRfinderflow is a pipeline for efficient and parallelised screening of long nucleotide sequences such as contigs for antimicrobial resistance genes. It can additionally identify the taxonomic origin of the sequences and provide protein domain annotations.
+Caymanflow is a pipeline for annotating shotgun metagenomic paired-end reads using Cayman. It includes optional quality control with fastp.
 
 ## Running the pipeline
 
 The typical command for running the pipeline is as follows:
 
 ```bash
-nextflow run barbarahelena/amrfinderflow --input samplesheet.csv --outdir <OUTDIR> -profile docker
+nextflow run barbarahelena/caymanflow --input samplesheet.csv --outdir <OUTDIR> -profile docker
 ```
 
 This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.
 
-ARG screening is enabled by default. You can optionally enable taxonomic classification and/or protein annotation by adding the respective flag(s) to the command:
-
-- `--run_taxa_classification` (for optional taxonomic annotations)
-- `--run_protein_annotation` (for optional protein family and domain annotation)
-
-For the taxonomic classification, MMseqs2 is currently the only tool implemented in the pipeline. Likewise, InterProScan is the only tool for protein sequence annotation.
-
-**Example:** You want to run ARG screening with taxonomic classification and protein annotation:
+Quality control is enabled by default. You can optionally skip it by adding the `--skip_qc` flag:
 
 ```bash
-nextflow run barbarahelena/amrfinderflow --input samplesheet.csv --outdir <OUTDIR> -profile docker --run_taxa_classification --run_protein_annotation
+nextflow run barbarahelena/caymanflow --input samplesheet.csv --outdir <OUTDIR> -profile docker --skip_qc
 ```
 
 Note that the pipeline will create the following files in your working directory:
@@ -49,7 +42,7 @@ Pipeline settings can be provided in a `yaml` or `json` file via `-params-file <
 The above pipeline run specified with a params file in yaml format:
 
 ```bash
-nextflow run barbarahelena/amrfinderflow -profile docker -params-file params.yaml
+nextflow run barbarahelena/caymanflow -profile docker -params-file params.yaml
 ```
 
 with:
@@ -64,62 +57,34 @@ You can also generate such `YAML`/`JSON` files via [nf-core/launch](https://nf-c
 
 ## Samplesheet input
 
-barbarahelena/amrfinderflow takes FASTA files as input, typically contigs or whole genome sequences. To supply these to the pipeline, you will need to create a samplesheet with information about the samples you would like to analyse. Use this parameter to specify its location.
+barbarahelena/caymanflow takes paired-end FASTQ files as input. To supply these to the pipeline, you will need to create a samplesheet with information about the samples you would like to analyse. Use this parameter to specify its location.
 
 ```bash
 --input '[path to samplesheet file]'
 ```
 
-The input samplesheet has to be a comma-separated file (`.csv`) with 2-5 columns and a header row as shown in the examples below.
+The input samplesheet has to be a comma-separated file (`.csv`) with 3 columns and a header row as shown in the examples below.
 
 **Required columns:**
 - `sample`: Sample name
-- `fasta`: Path to FASTA file (contigs/genome)
+- `fastq_1`: Path to forward reads FASTQ file (R1)
+- `fastq_2`: Path to reverse reads FASTQ file (R2)
 
-**Optional columns:**
-- `group`: Group identifier for samples (see ARG workflow section below)
-- `protein`: Pre-generated protein FASTA file (`.faa`)
-- `gbk`: Pre-generated Genbank annotation file (`.gbk` or `.gbff`)
-
-If you already have annotated contigs with peptide sequences and an annotation file in Genbank format, you can supply these to the pipeline using the optional `protein` and `gbk` columns. If these additional columns are supplied, pipeline annotation (i.e. with bakta, prodigal, pyrodigal or prokka) will be skipped and your corresponding annotation files used instead.
-
-### Basic samplesheet (without pre-annotated data):
+### Basic samplesheet:
 
 ```csv title="samplesheet.csv"
-sample,fasta
-sample_1,/<path>/<to>/wastewater_metagenome_contigs_1.fasta.gz
-sample_2,/<path>/<to>/wastewater_metagenome_contigs_2.fasta.gz
-```
-
-### With grouping for ARG read mapping:
-
-```csv title="samplesheet.csv"
-sample,group,fasta
-sample_1,0,/<path>/<to>/wastewater_metagenome_contigs_1.fasta.gz
-sample_2,0,/<path>/<to>/wastewater_metagenome_contigs_2.fasta.gz
-sample_3,1,/<path>/<to>/wastewater_metagenome_contigs_3.fasta.gz
-sample_4,1,/<path>/<to>/wastewater_metagenome_contigs_4.fasta.gz
-```
-
-### With pre-annotated data:
-
-```csv title="samplesheet.csv"
-sample,fasta,protein,gbk
-sample_1,/<path>/<to>/wastewater_metagenome_contigs_1.fasta.gz,/<path>/<to>/wastewater_metagenome_contigs_1.faa,/<path>/<to>/wastewater_metagenome_contigs_1.fasta.gbk
-sample_2,/<path>/<to>/wastewater_metagenome_contigs_2.fasta.gz,/<path>/<to>/wastewater_metagenome_contigs_2.faa,/<path>/<to>/wastewater_metagenome_contigs_2.fasta.gbk
+sample,fastq_1,fastq_2
+sample_1,/<path>/<to>/sample_1_R1.fastq.gz,/<path>/<to>/sample_1_R2.fastq.gz
+sample_2,/<path>/<to>/sample_2_R1.fastq.gz,/<path>/<to>/sample_2_R2.fastq.gz
 ```
 
 | Column    | Description                                                                                                                                                                                                           |
 | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `sample`  | Custom sample name. This will be used to name all output files from the pipeline. Spaces in sample names are automatically converted to underscores (`_`).                                                            |
-| `group`   | **Optional.** Group identifier (integer or string) for grouping samples in ARG workflow. Samples with the same group ID will have their ARG sequences merged and deduplicated together before read mapping. If not provided, each sample is treated as its own group. |
-| `fasta`   | Path or URL to a gzipped or uncompressed FASTA file. Accepted file suffixes are: `.fasta`, `.fna`, or `.fa`, or any of these with `.gz`, e.g. `.fa.gz`.                                                               |
-| `protein` | **Optional.** Path to a pre-generated amino acid FASTA file (`.faa`) containing protein annotations of `fasta`, optionally gzipped. Required to be supplied if `gbk` also given.                                           |
-| `gbk`     | **Optional.** Path to a pre-generated annotation file in Genbank format (`.gbk`, or `.gbff`) format containing annotations information of `fasta`, optionally gzipped. Required to be supplied if `protein` is also given. |
+| `fastq_1` | Path or URL to a gzipped or uncompressed forward reads FASTQ file. Accepted file suffixes are: `.fastq`, `.fq`, or any of these with `.gz`, e.g. `.fastq.gz`.                                                               |
+| `fastq_2` | Path or URL to a gzipped or uncompressed reverse reads FASTQ file. Accepted file suffixes are: `.fastq`, `.fq`, or any of these with `.gz`, e.g. `.fastq.gz`.                                                               |
 
 An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
-
-### FASTQ input for ARG read mapping
 
 If you want to perform ARG abundance quantification by mapping metagenomic reads to the detected ARG catalog, you can provide an additional FASTQ samplesheet via the `--input_fastqs` parameter:
 
@@ -194,70 +159,19 @@ By default, the databases used by InterProScan is set as `PANTHER,ProSiteProfile
 
 ## Databases and reference files
 
-Various tools of AMRFinderFlow use databases and reference files to operate.
+### Cayman Database
 
-nf-core/funcscan offers the functionality to auto-download databases for you, and as these databases can be very large, we suggest to store these files in a central place from where you can reuse them across pipeline runs.
+Cayman requires a database for annotation. The pipeline can automatically download this for you, or you can provide a pre-downloaded version.
 
-If your infrastructure has internet access (particularly on compute nodes), we **highly recommend** allowing the pipeline to download these databases for you on a first run, saving these to your results directory with `--save_db`, then moving these to a different location (in case you wish to delete the results directory of this first run). An exception to this is HMM files where no auto-downloading functionality is possible.
+Caymanflow will download this database for you automatically on the first run. The database will be cached for future use.
 
-:::warning
-We generally do not recommend downloading the databases yourself, as this can often be non-trivial to do!
-:::
-
-As a reference, we will describe below where and how you can obtain databases and reference files used for tools included in the pipeline.
-
-### Bakta
-
-AMRFinderFlow offers multiple tools for annotating input sequences. Bakta is a new tool touted as a bacteria-only successor to the well-established Prokka.
-
-To supply the preferred Bakta database (and not have the pipeline download it for every new run), use the flag `--annotation_bakta_db`.
-The full or light Bakta database must be downloaded from the Bakta Zenodo archive.
-
-You can do this by installing via conda and using the dedicated command
+If you want to use a pre-downloaded database, specify its location with:
 
 ```bash
-conda create -n bakta -c bioconda bakta
-conda activate bakta
-
-bakta_db download --output <LOCATION_TO_STORE> --type <full|light>
+--cayman_database '/<path>/<to>/<cayman_db>/'
 ```
 
-Alternatively, you can manually download the files via the links which can be found on the [Bakta GitHub repository](https://github.com/oschwengers/bakta#database-download).
-
-Once downloaded this must be untarred:
-
-```bash
-tar xvzf db.tar.gz
-```
-
-And then passed to the pipeline with:
-
-```bash
---annotation_bakta_db /<path>/<to>/<db>/
-```
-
-The contents of the directory should have files such as `*.dmnd` in the top level.
-
-:::info
-The flag `--save_db` saves the pipeline-downloaded databases in your results directory. You can then move these to a central cache directory of your choice for re-use in the future.
-:::
-
-### AMRFinderPlus
-
-AMRFinderPlus relies on NCBI's curated Reference Gene Database and curated collection of Hidden Markov Models.
-
-AMRfinderflow will download this database for you, unless the path to a local version is given with:
-
-```bash
---arg_amrfinderplus_db '/<path>/<to>/<amrfinderplus_db>/latest'
-```
-
-You must give the `latest` directory to the pipeline, and the contents of the directory should include files such as `*.nbd`, `*.nhr`, `versions.txt` etc. in the top level.
-
-To obtain a local version of the database:
-
-1. Install AMRFinderPlus from [bioconda](https://bioconda.github.io/recipes/ncbi-amrfinderplus/README.html?highlight=amrfinderplus).
-   To ensure database compatibility, please use the same version as is used in your amrfinderflow release (check version in file `<installation>/<path>/amrfinderflow/modules/nf-core/amrfinderplus/run/environment.yml`).
+To manually download the Cayman database, follow the instructions in the [Cayman repository](https://github.com/zellerlab/cayman).
 
 ```bash
 conda create -n amrfinderplus -c bioconda ncbi-amrfinderplus=3.12.8
@@ -364,14 +278,14 @@ interproscan_db/
 When you run the below command, Nextflow automatically pulls the pipeline code from GitHub and stores it as a cached version. When running the pipeline after this, it will always use the cached version if available - even if the pipeline has been updated since. To make sure that you're running the latest version of the pipeline, make sure that you regularly update the cached version of the pipeline:
 
 ```bash
-nextflow pull barbarahelena/amrfinderflow
+nextflow pull barbarahelena/caymanflow
 ```
 
 ## Reproducibility
 
 It is a good idea to specify the pipeline version when running the pipeline on your data. This ensures that a specific version of the pipeline code and software are used when you run your pipeline. If you keep using the same tag, you'll be running the same version of the pipeline, even if there have been changes to the code since.
 
-First, go to the [barbarahelena/amrfinderflow releases page](https://github.com/barbarahelena/amrfinderflow/releases) and find the latest pipeline version - numeric only (eg. `1.3.1`). Then specify this when running the pipeline with `-r` (one hyphen) - eg. `-r 1.3.1`. Of course, you can switch to another version by changing the number after the `-r` flag.
+First, go to the [barbarahelena/caymanflow releases page](https://github.com/barbarahelena/caymanflow/releases) and find the latest pipeline version - numeric only (eg. `1.0.0`). Then specify this when running the pipeline with `-r` (one hyphen) - eg. `-r 1.0.0`. Of course, you can switch to another version by changing the number after the `-r` flag.
 
 This version number will be logged in reports when you run the pipeline, so that you'll know what you used when you look back in the future.
 

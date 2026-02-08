@@ -49,6 +49,12 @@
                     "help_text": "If not provided, the pipeline will download the Cayman database automatically. If you have a pre-downloaded database, specify the path here to save time.",
                     "fa_icon": "fas fa-database"
                 },
+                "skip_bwa_index": {
+                    "type": "boolean",
+                    "description": "Skip BWA-MEM2 indexing step.",
+                    "help_text": "Set this flag to skip the BWA-MEM2 indexing step. Use this only if the database is already indexed. The index files must be located in the same directory as the database with the same basename.",
+                    "fa_icon": "fas fa-forward"
+                },
                 "skip_qc": {
                     "type": "boolean",
                     "description": "Skip quality control step with fastp.",

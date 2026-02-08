@@ -1,10 +1,10 @@
-# AMRfinderflow: Documentation
+# Caymanflow: Documentation
 
 <p align="center">
-  <img src="images/amrfinderflow.png" alt="AMRfinderflow Logo" width="600">
+  <img src="images/caymanflow.png" alt="Caymanflow Logo" width="600">
 </p>
 
-The AMRfinderflow documentation is split into the following pages:
+The Caymanflow documentation is split into the following pages:
 
 - [Usage](usage.md)
   - An overview of how the pipeline works, how to run it and a description of all of the different command-line flags.
