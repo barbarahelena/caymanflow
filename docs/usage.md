@@ -4,7 +4,14 @@
 
 ## Introduction
 
-Caymanflow is a pipeline for annotating shotgun metagenomic paired-end reads using Cayman. It includes optional quality control with fastp.
+Caymanflow is a bioinformatics pipeline for annotating shotgun metagenomic paired-end reads using Cayman. The pipeline provides a comprehensive workflow that includes:
+
+- **Read Counting**: Tracks reads at multiple stages (raw, post-QC, post-host-removal)
+- **Optional Quality Control**: Quality filtering and adapter trimming with fastp (can be skipped with `--skip_qc`)
+- **Optional Host Read Removal**: Remove host contamination using Bowtie2 with iGenomes support (can be skipped with `--skip_host_removal`)
+- **Database Preparation**: Automatic download from Zenodo, unzipping, decompression, and BWA index creation
+- **Direct Functional Annotation**: Cayman for metagenomic read annotation
+- **Output Processing**: Automated generation of publication-ready tables (TPM, CPM, QC statistics)
 
 ## Running the pipeline
 
@@ -16,17 +23,122 @@ nextflow run barbarahelena/caymanflow --input samplesheet.csv --outdir <OUTDIR> 
 
 This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.
 
-Quality control is enabled by default. You can optionally skip it by adding the `--skip_qc` flag:
+### Basic usage examples
+
+**Skip quality control:**
+```bash
+nextflow run barbarahelena/caymanflow \
+  --input samplesheet.csv \
+  --skip_qc \
+  --outdir <OUTDIR> \
+  -profile docker
+```
+
+**With host removal (human, GRCh38):**
+```bash
+nextflow run barbarahelena/caymanflow \
+  --input samplesheet.csv \
+  --genome GRCh38 \
+  --outdir <OUTDIR> \
+  -profile docker
+```
+
+**Complete pipeline with QC and host removal:**
+```bash
+nextflow run barbarahelena/caymanflow \
+  --input samplesheet.csv \
+  --genome GRCh38 \
+  --cayman_dbname human-gut \
+  --outdir <OUTDIR> \
+  -profile singularity
+```
+
+## Database Options
+
+The pipeline provides flexible options for providing the Cayman database:
+
+### Option 1: Automatic Download (Default)
+
+By default, the pipeline downloads the database from Zenodo based on the `--cayman_dbname` parameter:
 
 ```bash
-nextflow run barbarahelena/caymanflow --input samplesheet.csv --outdir <OUTDIR> -profile docker --skip_qc
+nextflow run barbarahelena/caymanflow \
+  --input samplesheet.csv \
+  --cayman_dbname human-gut \
+  --outdir results \
+  -profile docker
 ```
+
+Available database names:
+- `human-gut` (default)
+- `pig-gut`
+- `dog-gut`
+- `cat-gut`
+- `mouse-gut`
+- `chicken-gut`
+- `freshwater`
+- `wastewater`
+- `marine`
+- `human-skin`
+
+The downloaded database and annotations are automatically stored in `db/cayman/` and reused in subsequent runs.
+
+### Option 2: Provide Your Own Database
+
+You can provide a pre-existing database file. The pipeline supports multiple formats:
+
+**Uncompressed FASTA:**
+```bash
+nextflow run barbarahelena/caymanflow \
+  --input samplesheet.csv \
+  --cayman_database /path/to/database.fna \
+  --cayman_annotations /path/to/annotations.csv \
+  --outdir results \
+  -profile docker
+```
+
+**Gzipped FASTA:**
+```bash
+nextflow run barbarahelena/caymanflow \
+  --input samplesheet.csv \
+  --cayman_database /path/to/database.fna.gz \
+  --cayman_annotations /path/to/annotations.csv \
+  --outdir results \
+  -profile docker
+```
+
+**Zip archive (containing both database and annotations):**
+```bash
+nextflow run barbarahelena/caymanflow \
+  --input samplesheet.csv \
+  --cayman_database /path/to/gene_catalogues.zip \
+  --cayman_annotations /path/to/annotations.zip \
+  --outdir results \
+  -profile docker
+```
+
+### Option 3: Provide Pre-computed BWA Index
+
+If you have already created a BWA index for your database, you can provide it to save computation time:
+
+```bash
+nextflow run barbarahelena/caymanflow \
+  --input samplesheet.csv \
+  --cayman_database /path/to/database.fna \
+  --cayman_annotations /path/to/annotations.csv \
+  --bwa_index /path/to/index/directory \
+  --outdir results \
+  -profile docker
+```
+
+The `--bwa_index` directory should contain files with extensions: `.amb`, `.ann`, `.bwt`, `.pac`, and `.sa`.
 
 Note that the pipeline will create the following files in your working directory:
 
 ```bash
 work            # Directory containing temporary files required for the run
 <OUTDIR>        # Final results (location specified with --outdir)
+db/             # Cached database files (if using automatic download)
 .nextflow_log   # Log file from nextflow
 
 # Other nextflow hidden files, eg. history of pipeline runs and old logs
@@ -86,192 +198,244 @@ sample_2,/<path>/<to>/sample_2_R1.fastq.gz,/<path>/<to>/sample_2_R2.fastq.gz
 
 An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
 
-If you want to perform ARG abundance quantification by mapping metagenomic reads to the detected ARG catalog, you can provide an additional FASTQ samplesheet via the `--input_fastqs` parameter:
+## Host Read Removal
+
+The pipeline supports optional host read removal using Bowtie2. This step can be skipped with `--skip_host_removal`.
+
+### Using iGenomes References (Recommended)
+
+The easiest way to enable host removal is to use a reference genome from iGenomes:
 
 ```bash
---input_fastqs '[path to fastq samplesheet file]'
+nextflow run barbarahelena/caymanflow \
+  --input samplesheet.csv \
+  --genome GRCh38 \
+  --outdir results \
+  -profile docker
 ```
 
-The FASTQ samplesheet should be a comma-separated file (`.csv`) with 4 columns (`sample`, `group`, `fastq_1`, `fastq_2`):
+Available genomes include (see `conf/igenomes.config` for the complete list):
+- **Human**: `GRCh38`, `GRCh37`, `hg38`, `hg19`
+- **Mouse**: `GRCm38`, `GRCm39`, `mm10`, `mm39`
+- **Rat**: `Rnor_6.0`
+- **Zebrafish**: `GRCz10`, `GRCz11`
+- **Dog**: `CanFam3.1`
+- **Pig**: `Sscrofa11.1`
+- And many more...
 
-```csv title="samplesheet_fastqs.csv"
-sample,group,fastq_1,fastq_2
-sample_1,0,/<path>/<to>/sample_1_R1.fq.gz,/<path>/<to>/sample_1_R2.fq.gz
-sample_2,0,/<path>/<to>/sample_2_R1.fq.gz,/<path>/<to>/sample_2_R2.fq.gz
-sample_3,1,/<path>/<to>/sample_3_R1.fq.gz,/<path>/<to>/sample_3_R2.fq.gz
-sample_4,1,/<path>/<to>/sample_4_R1.fq.gz,/<path>/<to>/sample_4_R2.fq.gz
+### Using Custom Host References
+
+**Option 1: Pre-built Bowtie2 index**
+
+If you already have a Bowtie2 index:
+
+```bash
+nextflow run barbarahelena/caymanflow \
+  --input samplesheet.csv \
+  --host_bowtie2_index /path/to/host_bowtie2_index \
+  --outdir results \
+  -profile docker
 ```
 
-| Column    | Description                                                                                                                                                                                                           |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sample`  | Sample name. Should match the `sample` names in the main input samplesheet.                                                                                                                                           |
-| `group`   | Group identifier. Should match the `group` values in the main input samplesheet.                                                                                                                                      |
-| `fastq_1` | Path to forward read FASTQ file (gzipped or uncompressed).                                                                                                                                                            |
-| `fastq_2` | Path to reverse read FASTQ file (gzipped or uncompressed).                                                                                                                                                            |
+The index directory should contain files with the `.bt2` or `.bt2l` extensions.
 
-The pipeline will:
-1. Detect ARGs in contigs using AMRFinderPlus (protein mode with Pyrodigal)
-2. Extract ARG nucleotide sequences with metadata (gene symbol, class, subclass)
-3. Merge and deduplicate ARG sequences per group (95% identity with CD-HIT-EST)
-4. Create BWA-MEM2 index for each group's ARG catalog
-5. Map reads from each sample to their group's ARG catalog
-6. Calculate abundance metrics (RPKM, RPK, Coverage, Prevalence) for each ARG
-7. Merge results per group and across all samples
+**Option 2: Host FASTA file**
 
-:::danger
-We highly recommend performing quality control on input contigs before running the pipeline. You may not receive results for some tools if none of the contigs in a FASTA file reach certain thresholds. Check parameter documentation for relevant minimum contig parameters.
-:::
+If you have a host genome FASTA file, the pipeline will build the Bowtie2 index for you:
 
-## Notes on screening tools, taxonomic and functional classifications
+```bash
+nextflow run barbarahelena/caymanflow \
+  --input samplesheet.csv \
+  --host_fasta /path/to/host_genome.fasta \
+  --outdir results \
+  -profile docker
+```
 
-The implementation of some tools in the pipeline may have some particular behaviours that you should be aware of before you run the pipeline.
+The built index will be cached in the `db/` directory for future runs.
 
-### MMseqs2
+### Saving Host-Filtered Reads
 
-MMseqs2 is currently the only taxonomic classification tool used in the pipeline to assign a taxonomic lineage to the input contigs. The database used to assign the taxonomic lineage can either be:
+By default, only host removal statistics are saved. To also save the host-filtered reads:
 
-- A custom based database created by the user using `mmseqs createdb` externally and beforehand. If this flag is assigned, this database takes precedence over the default database in `--mmseqs_db_id`.
+```bash
+nextflow run barbarahelena/caymanflow \
+  --input samplesheet.csv \
+  --genome GRCh38 \
+  --save_host_filtered_reads \
+  --outdir results \
+  -profile docker
+```
 
-  ```bash
-  --taxa_classification_mmseqs_db '<path>/<to>/<mmsesqs_custom_database>/<directory>'
-  ```
+### Host Removal Parameters
 
-  The contents of the directory should have files such as `<dbname>.version` and `<dbname>.taxonomy` in the top level.
+- `--skip_host_removal`: Skip host read removal step (default: `false`)
+- `--genome`: iGenomes reference genome name (e.g., `GRCh38`, `mm10`)
+- `--host_bowtie2_index`: Path to pre-built Bowtie2 index directory
+- `--host_fasta`: Path to host genome FASTA file (will build index)
+- `--save_host_filtered_reads`: Save the host-filtered reads (default: `false`)
+- `--igenomes_base`: Base path for iGenomes references (default: `s3://ngi-igenomes/igenomes`)
+- `--igenomes_ignore`: Ignore iGenomes and use only custom references (default: `false`)
 
-- An MMseqs2 ready database. These databases were compiled by the developers of MMseqs2 and can be called using their labels. All available options can be found [here](https://github.com/soedinglab/MMseqs2/wiki#downloading-databases). Only use those databases that have taxonomy files available (i.e. Taxonomy column shows "yes"). By default MMseqs2 in the pipeline uses '[Kalamari](https://github.com/lskatz/Kalamari)', and runs an amino acid-based alignment. However, if the user requires a more comprehensive taxonomic classification, we recommend the use of [GTDB](https://gtdb.ecogenomic.org/), but for that please remember to increase the memory, CPU threads and time required for the process `MMSEQS_TAXONOMY`.
+**Note**: Only one of `--genome`, `--host_bowtie2_index`, or `--host_fasta` should be provided.
 
-  ```bash
-  --taxa_classification_mmseqs_db_id 'Kalamari'
-  ```
+## Pipeline workflow
 
-### InterProScan
+When you run the pipeline, the following steps are performed:
 
-[InterProScan](https://github.com/ebi-pf-team/interproscan) is currently the only protein annotation tool in this pipeline that gives a snapshot of the protein families and domains for each coding region.
+1. **Read Counting (Raw)**: Count reads in raw input FASTQ files
+2. **Quality Control (optional)**: If `--skip_qc` is not specified, fastp performs quality filtering and adapter trimming
+   - Read counting after QC (if not skipped)
+3. **Host Read Removal (optional)**: If `--skip_host_removal` is not specified, Bowtie2 removes host contamination
+   - Supports iGenomes references (e.g., `--genome GRCh38`)
+   - Or custom host references (pre-built index or FASTA file)
+   - Read counting after host removal (if not skipped)
+4. **Database Preparation**: 
+   - If no database is provided, downloads gene catalogues from Zenodo
+   - Unzips and decompresses files as needed
+   - Creates BWA index if not provided
+5. **Read Annotation**: Cayman aligns reads to the gene catalogue and produces:
+   - Alignment statistics (`.aln_stats.txt.gz`)
+   - Gene count tables (`.gene_counts.txt.gz`)
+6. **Output Processing**: Automated generation of analysis-ready tables:
+   - Gene-level TPM (Transcripts Per Million) matrix
+   - Family-level CPM (Counts Per Million) matrix
+   - Sample quality control and complexity statistics
 
-The protein annotation workflow is activated with the flag `--run_protein_annotation`.
-InterProScan is used as the only protein annotation tool at the moment and the [InterPro database](http://ftp.ebi.ac.uk/pub/software/unix/iprscan/5/5.72-103.0) version 5.72-103.0 is downloaded and prepared to screen the input sequences against it.
+## Output Files
 
-Since the database download is huge (5.5GB) and might take quite some time, you can skip the automatic database download (see section [Databases and reference files](usage/#interproscan-1) for details).
+The pipeline generates the following output structure:
 
-:::info
-By default, the databases used by InterProScan is set as `PANTHER,ProSiteProfiles,ProSitePatterns,Pfam`. An addition of other application to the list does not guarantee that the results will be integrated correctly within `AMPcombi`.
-:::
+```
+results/
+├── readcounts/                          # Read count summaries
+│   ├── readcounts_raw.csv              # Read counts from raw input files
+│   ├── readcounts_after_qc.csv         # Read counts after QC (if not skipped)
+│   └── readcounts_after_host_removal.csv  # Read counts after host removal (if not skipped)
+├── qc/
+│   └── fastp/                           # Quality control reports (if not skipped)
+│       ├── *.json
+│       └── *.html
+├── host_removal/                        # Host removal statistics (if not skipped)
+│   ├── *.bowtie2.log                   # Bowtie2 alignment logs
+│   ├── *.stats                         # Alignment statistics
+│   └── reads/                          # Host-filtered reads (if --save_host_filtered_reads)
+├── cayman/                              # Cayman annotation results
+│   ├── compressed/
+│   │   ├── *.aln_stats.txt.gz          # Alignment statistics (compressed)
+│   │   └── *.gene_counts.txt.gz        # Gene count tables (compressed)
+│   ├── uncompressed/
+│   │   ├── *.aln_stats.txt             # Alignment statistics (decompressed)
+│   │   └── *.gene_counts.txt           # Gene count tables (decompressed)
+│   ├── processed/                       # Per-sample processed files
+│   │   ├── *_genes_tpm.tsv             # Gene-level TPM per sample
+│   │   ├── *_families_cpm.tsv          # Family-level CPM per sample
+│   │   └── *_sample_stats.tsv          # Sample statistics
+│   └── tables/                          # Merged tables across all samples
+│       ├── families_cpm_table.tsv      # Family-level CPM across all samples
+│       └── sample_statistics.tsv       # Sample QC statistics
+└── pipeline_info/                       # Pipeline execution information
+    ├── execution_report.html
+    ├── execution_timeline.html
+    └── pipeline_dag.html
+```
 
-## Databases and reference files
+### Read Count Files
+
+The pipeline generates separate CSV files tracking read counts at each processing stage:
+
+- **`readcounts_raw.csv`**: Read counts from the original input FASTQ files
+- **`readcounts_after_qc.csv`**: Read counts after fastp quality control (only if `--skip_qc` is not used)
+- **`readcounts_after_host_removal.csv`**: Read counts after Bowtie2 host filtering (only if `--skip_host_removal` is not used)
+
+Each CSV file has the format:
+```csv
+SampleID,ReadCount
+sample1,1000000
+sample2,2000000
+```
+
+These files allow you to track how many reads are retained at each step of the pipeline.
+
+### Cayman Output Tables
+
+The pipeline processes Cayman outputs into publication-ready tables:
+
+#### 1. Per-sample Gene TPM Files (`*_genes_tpm.tsv`)
+
+Gene-level expression in TPM (Transcripts Per Million) for each sample:
+- Contains TPM values for all annotated genes in that sample
+- UNKNOWN genes are filtered out
+- Uses combined counts (multi-mapped reads are distributed)
+- Format: Two columns (gene_name, tpm)
+- Located in `cayman/processed/`
+
+#### 2. Family-level CPM Table (`families_cpm_table.tsv`)
+
+Gene family-level expression in CPM (Counts Per Million) merged across all samples:
+- Aggregates genes by family annotation
+- CPM normalization for cross-sample comparison
+- Families extracted from annotation file via inner join
+- Format: Families in rows, samples in columns
+- Located in `cayman/tables/`
+
+#### 3. Sample Statistics Table (`sample_statistics.tsv`)
+
+Quality control and complexity metrics per sample:
+- `total_reads`: Total input reads to Cayman
+- `passed_reads`: Reads that aligned to the gene catalogue
+- `filter_efficiency`: Proportion of reads that passed (passed/total)
+- `richness`: Number of unique genes detected
+- `complexity`: Unique genes per passed read (richness/passed)
+- `pct_cazy_reads`: Percentage of reads mapping to CAZy genes
+- Located in `cayman/tables/`
+
+## Notes on the Cayman Tool
+
+[Cayman](https://github.com/zellerlab/cayman) is a tool for direct functional annotation of metagenomic reads without assembly. It uses BWA for alignment and provides gene-level abundance estimates.
+
+Key features:
+- Direct read annotation (no assembly required)
+- Multiple gene catalogues available (gut microbiomes, environmental, etc.)
+- Combined count strategy for handling multi-mapped reads
+- Integration with functional annotation databases (CAZy, KEGG, etc.)
+
+## Database Options and Reference Files
 
 ### Cayman Database
 
-Cayman requires a database for annotation. The pipeline can automatically download this for you, or you can provide a pre-downloaded version.
+Cayman requires a gene catalogue database for annotation. The pipeline supports multiple ways to provide this:
 
-Caymanflow will download this database for you automatically on the first run. The database will be cached for future use.
+### Automatic Download (Recommended)
 
-If you want to use a pre-downloaded database, specify its location with:
+By default, the pipeline will download the appropriate database from Zenodo based on the `--cayman_dbname` parameter. The downloaded files are cached in the `db/cayman/` directory for reuse.
 
-```bash
---cayman_database '/<path>/<to>/<cayman_db>/'
-```
+### Pre-downloaded Database
 
-To manually download the Cayman database, follow the instructions in the [Cayman repository](https://github.com/zellerlab/cayman).
+If you have a pre-downloaded database file, you can provide it directly:
 
 ```bash
-conda create -n amrfinderplus -c bioconda ncbi-amrfinderplus=3.12.8
-conda activate amrfinderplus
+--cayman_database /path/to/database.fna.gz \
+--cayman_annotations /path/to/annotations.csv
 ```
 
-2. Run `amrfinder --update`, which will download the latest version of the AMRFinderPlus database to the default location (location of the AMRFinderPlus binaries/data).
-   It creates a directory in the format YYYY-MM-DD.version (e.g., `<installation>/<path>/data/2024-01-31.1/`).
+The pipeline supports:
+- Uncompressed FASTA (`.fna`)
+- Gzipped FASTA (`.fna.gz`)
+- Zip archives (`.zip`)
 
-<details markdown="1">
-<summary>AMR related files in the database folder</summary>
+### Pre-computed BWA Index
 
-```tree
-<YYYY-MM-DD.v>/
-├── AMR_CDS.*
-├── AMR_DNA-Campylobacter.*
-├── AMR_DNA-Clostridioides_difficile.*
-├── AMR_DNA-Enterococcus_faecalis.*
-├── AMR_DNA-Enterococcus_faecium.*
-├── AMR_DNA-Escherichia.*
-├── AMR_DNA-Neisseria.*
-├── AMR_DNA-Salmonella.*
-├── AMR_DNA-Staphylococcus_aureus.*
-├── AMR_DNA-Streptococcus_pneumoniae.*
-├── AMR.LIB.*
-├── AMRProt.*
-├── changes.txt
-├── database_format_version.txt
-├── fam.tab
-├── taxgroup.tab
-└── version.txt
-```
-
-</details>
-
-:::info
-The flag `--save_db` saves the pipeline-downloaded databases in your results directory. You can then move these to a central cache directory of your choice for re-use in the future.
-:::
-
-### MMSeqs2
-
-To download MMSeqs2 databases for taxonomic classification, you can install `mmseqs` via conda:
+To save computation time, you can provide a pre-built BWA index:
 
 ```bash
-conda create -n mmseqs2 -c bioconda mmseqs2
-conda activate mmseqs2
+--cayman_database /path/to/database.fna.gz \
+--cayman_annotations /path/to/annotations.csv \
+--bwa_index /path/to/index/directory
 ```
 
-Then to download the database of your choice
+The index directory should contain files with extensions: `.amb`, `.ann`, `.bwt`, `.pac`, and `.sa`.
 
-```bash
-mmseqs databases <DATABASE_NAME> <LOCATION_TO_STORE> tmp/
-```
-
-:::info
-You may want to specify a different location for `tmp/`, we just borrowed here from the official `mmseqs` [documentation](https://github.com/soedinglab/mmseqs2/wiki#downloading-databases).
-:::
-
-### InterProScan
-
-[InterProScan](https://github.com/ebi-pf-team/interproscan) is used to provide more information about the proteins annotated on the contigs. By default, turning on this subworkflow with `--run_protein_annotation` will download and unzip the [InterPro database](http://ftp.ebi.ac.uk/pub/software/unix/iprscan/5/5.72-103.0/) version 5.72-103.0. The database can be saved in the output directory `<output_directory>/databases/interproscan/` if the `--save_db` is turned on.
-
-:::note
-The huge database download (5.5GB) can take up to 4 hours depending on the bandwidth.
-:::
-
-A local version of the database can be supplied to the pipeline by passing the InterProScan database directory to `--protein_annotation_interproscan_db <path/to/downloaded-untarred-interproscan_db-dir/>`. The directory can be created by running (e.g. for database version 5.72-103.0):
-
-```
-curl -L https://ftp.ebi.ac.uk/pub/software/unix/iprscan/5/5.72-103.0/interproscan-5.72-103.0-64-bit.tar.gz -o interproscan_db/interproscan-5.72-103.0-64-bit.tar.gz
-tar -xzf interproscan_db/interproscan-5.72-103.0-64-bit.tar.gz -C interproscan_db/
-
-```
-
-The contents of the database directory should include the directory `data` in the top level with a couple of subdirectories:
-
-```
-interproscan_db/
-    └── data/
-    ├── antifam
-    ├── cdd
-    ├── funfam
-    ├── gene3d
-    ├── hamap
-    ├── ncbifam
-    ├── panther
-    | └── [18.0]
-    ├── pfam
-    | └── [36.0]
-    ├── phobius
-    ├── pirsf
-    ├── pirsr
-    ├── prints
-    ├── prosite
-    | └── [2023_05]
-    ├── sfld
-    ├── smart
-    ├── superfamily
-    └── tmhmm
-```
+For more details on database options, see the [Database Options](#database-options) section above.
 
 ## Updating the pipeline
 

@@ -7,13 +7,14 @@ process CAYMAN_CAYMAN {
 
     input:
     tuple val(meta), path(reads)
-    path(db, stageAs: "database.fna")
-    path(index, stageAs: "database.fna.*", arity: '0..*')
+    path(index, stageAs: "index/*")
     path(anno, stageAs: "anno.csv")
+    val(dbname)
 
     output:
-    tuple val(meta), path("${meta.id}/*"), emit: cayman
-    path "versions.yml"                  , emit: versions
+    tuple val(meta), path("${meta.id}.aln_stats.txt.gz")    , emit: aln_stats
+    tuple val(meta), path("${meta.id}.gene_counts.txt.gz") , emit: gene_counts
+    path "versions.yml"                                     , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -25,12 +26,11 @@ process CAYMAN_CAYMAN {
     def r2 = reads[1]
     """
     cayman profile -1 ${r1} -2 ${r2} \\
-        database.fna \\
-        index.fna \\
-        anno.csv \\
         --cpus_for_alignment ${task.cpus} \\
         ${args} \\
-        --outdir ${prefix}
+        --out_prefix ${prefix} \\
+        anno.csv \\
+        index/${dbname}.fna
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

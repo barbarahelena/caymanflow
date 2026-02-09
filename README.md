@@ -4,12 +4,15 @@ A Nextflow pipeline for running Cayman on shotgun paired-end metagenomic reads.
 
 ## Introduction
 
-**Caymanflow** is a simple bioinformatics pipeline that annotates shotgun metagenomic paired-end reads using [Cayman](https://github.com/zellerlab/cayman).
+**Caymanflow** is a bioinformatics pipeline that annotates shotgun metagenomic paired-end reads using [Cayman](https://github.com/zellerlab/cayman).
 
 ## Pipeline Summary
 
-1. **Optional Quality Control**: Quality filtering and adapter trimming with [`fastp`](https://github.com/OpenGene/fastp) (can be skipped with `--skip_qc`)
-2. **Annotation**: Direct annotation of metagenomic reads using [`Cayman`](https://github.com/zellerlab/cayman)
+1. Read counting at multiple stages (raw, post-QC, post-host-removal)
+2. Optional quality control with fastp
+3. Optional host read removal with Bowtie2 (supports iGenomes)
+4. Direct functional annotation with Cayman
+5. Automated processing of gene counts into publication-ready tables
 
 ## Quick Start
 
@@ -32,45 +35,62 @@ nextflow run caymanflow \
   -profile docker
 ```
 
-## Parameters
+### 3. With host removal and custom database
 
-### Required Parameters
+```bash
+nextflow run caymanflow \
+  --input samplesheet.csv \
+  --genome GRCh38 \
+  --cayman_dbname human-gut \
+  --outdir results \
+  -profile singularity
+```
 
-- `--input`: Path to the samplesheet CSV file
+## Main Parameters
 
-### Optional Parameters
-
+- `--input`: Path to samplesheet CSV file (required)
 - `--outdir`: Output directory (default: `./results`)
-- `--skip_qc`: Skip quality control step (default: `false`)
-- `--cayman_database`: Path to pre-downloaded Cayman database (if not provided, will be downloaded automatically)
-
-### Profile Options
-
-- `-profile docker`: Use Docker containers
-- `-profile singularity`: Use Singularity containers
-- `-profile conda`: Use Conda environments
+- `--skip_qc`: Skip quality control step
+- `--skip_host_removal`: Skip host read removal step
+- `--genome`: iGenomes reference (e.g., `GRCh38`, `GRCm38`, `mm10`)
+- `--cayman_dbname`: Database name (default: `human-gut`)
+- `-profile`: Software management (`docker`, `singularity`, `conda`)
 
 ## Output
 
-The pipeline will create the following output structure:
-
 ```
 results/
-├── qc/
-│   └── fastp/                 # Quality control reports (if not skipped)
-│       ├── *.json
-│       └── *.html
-└── cayman/                    # Cayman annotation results
-    └── *.csv
+├── readcounts/              # Read counts at each processing stage
+├── qc/fastp/               # Quality control reports
+├── host_removal/           # Host removal statistics
+├── cayman/
+│   ├── compressed/         # Raw Cayman outputs
+│   ├── uncompressed/       # Decompressed outputs
+│   ├── processed/          # Per-sample processed files (gene TPM, family CPM, stats)
+│   └── tables/             # Merged tables (family CPM, sample statistics)
+└── pipeline_info/          # Execution reports
 ```
+
+## Documentation
+
+For detailed documentation including:
+- Complete parameter list
+- Database options and configuration
+- Host removal with iGenomes
+- Output file descriptions
+- Advanced usage examples
+
+Please see [docs/usage.md](docs/usage.md)
 
 ## Credits
 
 This pipeline uses:
 - [Nextflow](https://www.nextflow.io/)
 - [fastp](https://github.com/OpenGene/fastp) for quality control
+- [Bowtie2](https://bowtie-bio.sourceforge.net/bowtie2/) for host removal
 - [Cayman](https://github.com/zellerlab/cayman) for read annotation
 
 ## License
 
 This pipeline is available under the MIT License.
+

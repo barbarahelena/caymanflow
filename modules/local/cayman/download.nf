@@ -1,6 +1,7 @@
 process CAYMAN_DOWNLOAD {
     tag "download"
     label 'process_single'
+    storeDir "db"
 
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://depot.galaxyproject.org/singularity/curl%3A7.80.0' :

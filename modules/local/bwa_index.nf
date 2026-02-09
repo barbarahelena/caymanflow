@@ -1,6 +1,6 @@
 process BWA_INDEX {
     tag "$fasta"
-    label 'process_highmemory'
+    label 'process_medium'
     storeDir "db"
 
     conda "bioconda::bwa=0.7.18"
