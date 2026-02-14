@@ -238,7 +238,7 @@ workflow CAYMANFLOW {
                     cayman_annotations = CAYMAN_UNZIP.out.annotations.first()
                 } else {
                     // Use annotations directly
-                    cayman_annotations = channel.fromPath(anno_path)
+                    cayman_annotations = channel.fromPath(anno_path).first()
                 }
             }
             // If anno_path was null, cayman_annotations already set from download above
@@ -267,7 +267,7 @@ workflow CAYMANFLOW {
                 
                 // Handle annotations (only if user provided, otherwise already set from download)
                 if (anno_path) {
-                    cayman_annotations = channel.fromPath(anno_path)
+                    cayman_annotations = channel.fromPath(anno_path).first()
                 }
             } else {
                 // Database is already decompressed
@@ -275,7 +275,7 @@ workflow CAYMANFLOW {
                 
                 // Handle annotations (only if user provided, otherwise already set from download)
                 if (anno_path) {
-                    cayman_annotations = channel.fromPath(anno_path)
+                    cayman_annotations = channel.fromPath(anno_path).first()
                 }
             }
             
