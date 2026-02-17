@@ -381,10 +381,12 @@ The pipeline processes Cayman outputs into publication-ready tables:
 #### 1. Per-sample Gene TPM Files (`*_genes_tpm.tsv`)
 
 Gene-level expression in TPM (Transcripts Per Million) for each sample:
-- Contains TPM values for all annotated genes in that sample
-- UNKNOWN genes are filtered out
+- Contains TPM values for all genes in that sample (including UNKNOWN genes)
 - Uses combined counts (multi-mapped reads are distributed)
-- Format: Two columns (gene_name, tpm)
+- Format: Four columns (gene_id, gene_name, family, tpm)
+  - `gene_id`: Unique gene identifier (e.g., `GMGC10.000_151_922.LACZ`)
+  - `gene_name`: Short gene name extracted from gene_id (e.g., `LACZ`)
+  - `family`: CAZy family from annotations (e.g., `GH2`)
 - Located in `cayman/processed/`
 
 #### 2. Family-level CPM Table (`families_cpm_table.tsv`)
@@ -407,15 +409,9 @@ Quality control and complexity metrics per sample:
 - `pct_cazy_reads`: Percentage of reads mapping to CAZy genes
 - Located in `cayman/tables/`
 
-## Notes on the Cayman Tool
+## Notes on Cayman
 
 [Cayman](https://github.com/zellerlab/cayman) is a tool for direct functional annotation of metagenomic reads without assembly. It uses BWA for alignment and provides gene-level abundance estimates.
-
-Key features:
-- Direct read annotation (no assembly required)
-- Multiple gene catalogues available (gut microbiomes, environmental, etc.)
-- Combined count strategy for handling multi-mapped reads
-- Integration with functional annotation databases (CAZy, KEGG, etc.)
 
 ## Database Options and Reference Files
 

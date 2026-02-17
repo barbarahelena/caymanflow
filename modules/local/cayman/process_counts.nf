@@ -47,17 +47,20 @@ process CAYMAN_PROCESS_COUNTS {
     # ========== 1. Process gene-level TPM data ==========
     cat("=== Processing gene-level TPM ===\\n")
     
-    # Filter out UNKNOWN genes and calculate TPM from combined_rpkm
+    # Calculate TPM from combined_rpkm and join with annotations for family info
     genes_tpm <- gene_counts %>%
-        filter(!str_detect(gene, "UNKNOWN")) %>%
+        left_join(
+            annotations %>% select(gene_id = sequenceID, family),
+            by = c("gene" = "gene_id")
+        ) %>%
         mutate(
             gene_name = str_extract(gene, "[^.]+\$"),  # Extract gene name after last dot
             tpm = combined_rpkm * 1000  # Convert RPKM to TPM (approximation)
         ) %>%
-        select(gene_name, tpm) %>%
-        rename(!!sample_id := tpm)
+        select(gene, gene_name, family, tpm) %>%
+        rename(gene_id = gene, !!sample_id := tpm)
     
-    cat("Genes after filtering UNKNOWN:", nrow(genes_tpm), "\\n")
+    cat("Genes in TPM table:", nrow(genes_tpm), "\\n")
     cat("First few rows:\\n")
     print(head(genes_tpm, 3))
     cat("\\n")
@@ -161,8 +164,8 @@ process CAYMAN_PROCESS_COUNTS {
     stub:
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
-    echo -e "gene_name\\t${prefix}" > ${prefix}_genes_tpm.tsv
-    echo -e "gene1\\t100" >> ${prefix}_genes_tpm.tsv
+    echo -e "gene_id\\tgene_name\\tfamily\\t${prefix}" > ${prefix}_genes_tpm.tsv
+    echo -e "GMGC10.000_000_001.GENE1\\tGENE1\\tGH1\\t100" >> ${prefix}_genes_tpm.tsv
     
     echo -e "family\\t${prefix}" > ${prefix}_families_cpm.tsv
     echo -e "family1\\t100" >> ${prefix}_families_cpm.tsv
