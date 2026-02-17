@@ -1,10 +1,10 @@
 # Caymanflow
 
-A Nextflow pipeline for running Cayman on shotgun paired-end metagenomic reads.
+A Nextflow pipeline for running Cayman on shotgun metagenomic reads (paired-end and single-end).
 
 ## Introduction
 
-**Caymanflow** is a bioinformatics pipeline that annotates shotgun metagenomic paired-end reads using [Cayman](https://github.com/zellerlab/cayman).
+**Caymanflow** is a bioinformatics pipeline that annotates shotgun metagenomic reads using [Cayman](https://github.com/zellerlab/cayman). It supports both paired-end and single-end reads.
 
 ## Pipeline Summary
 
@@ -18,13 +18,15 @@ A Nextflow pipeline for running Cayman on shotgun paired-end metagenomic reads.
 
 ### 1. Prepare your samplesheet
 
-Create a CSV file with your paired-end FASTQ files:
+Create a CSV file with your FASTQ files. Both paired-end and single-end reads are supported:
 
 ```csv
 sample,fastq_1,fastq_2
 sample1,/path/to/sample1_R1.fastq.gz,/path/to/sample1_R2.fastq.gz
-sample2,/path/to/sample2_R1.fastq.gz,/path/to/sample2_R2.fastq.gz
+sample2,/path/to/sample2.fastq.gz,
 ```
+
+For paired-end samples, provide both `fastq_1` and `fastq_2`. For single-end samples, leave `fastq_2` empty.
 
 ### 2. Run the pipeline
 

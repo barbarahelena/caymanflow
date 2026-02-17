@@ -139,12 +139,19 @@ def validateInputParameters(input) {
     if (fastq_1 && !fastq_1.exists()) {
         error("Please check fastqs samplesheet -> FastQ file does not exist: ${fastq_1}")
     }
-    
+
     if (fastq_2 && !fastq_2.exists()) {
         error("Please check fastqs samplesheet -> FastQ file does not exist: ${fastq_2}")
     }
 
-    return [meta, [fastq_1, fastq_2]]
+    // Automatically detect single-end reads: if fastq_2 is not provided, set single_end to true
+    if (!fastq_2) {
+        meta.single_end = true
+        return [meta, [fastq_1]]
+    } else {
+        meta.single_end = false
+        return [meta, [fastq_1, fastq_2]]
+    }
 }
 
 //

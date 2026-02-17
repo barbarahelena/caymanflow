@@ -9,7 +9,6 @@ process CAYMAN_CAYMAN {
     tuple val(meta), path(reads)
     path(index, stageAs: "index/*")
     path(anno, stageAs: "anno.csv")
-    val(dbname)
 
     output:
     tuple val(meta), path("${meta.id}.aln_stats.txt.gz")    , emit: aln_stats
@@ -22,15 +21,17 @@ process CAYMAN_CAYMAN {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
-    def r1 = reads[0]
-    def r2 = reads[1]
+    def input_reads = meta.single_end ? "-1 ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
     """
-    cayman profile -1 ${r1} -2 ${r2} \\
+    # Derive the reference path from a BWA index file (strip the .bwt extension)
+    REF=\$(ls index/*.bwt | sed 's/\\.bwt\$//')
+
+    cayman profile ${input_reads} \\
         --cpus_for_alignment ${task.cpus} \\
         ${args} \\
         --out_prefix ${prefix} \\
         anno.csv \\
-        index/${dbname}.fna
+        \${REF}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

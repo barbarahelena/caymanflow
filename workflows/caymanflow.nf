@@ -300,8 +300,7 @@ workflow CAYMANFLOW {
     CAYMAN_CAYMAN(
         ch_reads_for_cayman,
         ch_bwa_index,
-        cayman_annotations,
-        params.cayman_dbname
+        cayman_annotations
     )
     ch_versions = ch_versions.mix(CAYMAN_CAYMAN.out.versions)
 

@@ -4,7 +4,7 @@
 
 ## Introduction
 
-Caymanflow is a bioinformatics pipeline for annotating shotgun metagenomic paired-end reads using Cayman. The pipeline provides a comprehensive workflow that includes:
+Caymanflow is a bioinformatics pipeline for annotating shotgun metagenomic reads using Cayman. The pipeline supports both paired-end and single-end reads. The pipeline provides a comprehensive workflow that includes:
 
 - **Read Counting**: Tracks reads at multiple stages (raw, post-QC, post-host-removal)
 - **Optional Quality Control**: Quality filtering and adapter trimming with fastp (can be skipped with `--skip_qc`)
@@ -169,20 +169,22 @@ You can also generate such `YAML`/`JSON` files via [nf-core/launch](https://nf-c
 
 ## Samplesheet input
 
-barbarahelena/caymanflow takes paired-end FASTQ files as input. To supply these to the pipeline, you will need to create a samplesheet with information about the samples you would like to analyse. Use this parameter to specify its location.
+barbarahelena/caymanflow takes FASTQ files as input, supporting both paired-end and single-end reads. To supply these to the pipeline, you will need to create a samplesheet with information about the samples you would like to analyse. Use this parameter to specify its location.
 
 ```bash
 --input '[path to samplesheet file]'
 ```
 
-The input samplesheet has to be a comma-separated file (`.csv`) with 3 columns and a header row as shown in the examples below.
+The input samplesheet has to be a comma-separated file (`.csv`) with a header row as shown in the examples below.
 
 **Required columns:**
 - `sample`: Sample name
 - `fastq_1`: Path to forward reads FASTQ file (R1)
-- `fastq_2`: Path to reverse reads FASTQ file (R2)
 
-### Basic samplesheet:
+**Optional columns:**
+- `fastq_2`: Path to reverse reads FASTQ file (R2). If omitted, the sample is treated as single-end.
+
+### Paired-end samplesheet:
 
 ```csv title="samplesheet.csv"
 sample,fastq_1,fastq_2
@@ -190,11 +192,27 @@ sample_1,/<path>/<to>/sample_1_R1.fastq.gz,/<path>/<to>/sample_1_R2.fastq.gz
 sample_2,/<path>/<to>/sample_2_R1.fastq.gz,/<path>/<to>/sample_2_R2.fastq.gz
 ```
 
+### Single-end samplesheet:
+
+```csv title="samplesheet.csv"
+sample,fastq_1,fastq_2
+sample_1,/<path>/<to>/sample_1.fastq.gz,
+sample_2,/<path>/<to>/sample_2.fastq.gz,
+```
+
+### Mixed samplesheet (paired-end and single-end):
+
+```csv title="samplesheet.csv"
+sample,fastq_1,fastq_2
+sample_1,/<path>/<to>/sample_1_R1.fastq.gz,/<path>/<to>/sample_1_R2.fastq.gz
+sample_2,/<path>/<to>/sample_2.fastq.gz,
+```
+
 | Column    | Description                                                                                                                                                                                                           |
 | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `sample`  | Custom sample name. This will be used to name all output files from the pipeline. Spaces in sample names are automatically converted to underscores (`_`).                                                            |
 | `fastq_1` | Path or URL to a gzipped or uncompressed forward reads FASTQ file. Accepted file suffixes are: `.fastq`, `.fq`, or any of these with `.gz`, e.g. `.fastq.gz`.                                                               |
-| `fastq_2` | Path or URL to a gzipped or uncompressed reverse reads FASTQ file. Accepted file suffixes are: `.fastq`, `.fq`, or any of these with `.gz`, e.g. `.fastq.gz`.                                                               |
+| `fastq_2` | (Optional) Path or URL to a gzipped or uncompressed reverse reads FASTQ file. Accepted file suffixes are: `.fastq`, `.fq`, or any of these with `.gz`, e.g. `.fastq.gz`. If left empty, the sample is processed as single-end. |
 
 An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
 
